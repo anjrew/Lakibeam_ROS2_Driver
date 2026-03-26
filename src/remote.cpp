@@ -13,7 +13,7 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
     return size * nmemb;
 }
 
-static size_t dummy_callback(void *buffer, size_t size, size_t nmemb, void *userp)
+static size_t dummy_callback([[maybe_unused]] void *buffer, size_t size, size_t nmemb, [[maybe_unused]] void *userp)
 {
    return size * nmemb;
 }

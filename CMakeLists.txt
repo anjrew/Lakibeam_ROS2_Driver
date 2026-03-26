@@ -35,6 +35,8 @@ include_directories(
 add_executable(${PROJECT_NAME}_scan_node src/lakibeam1_scan.cpp src/remote.cpp)
 target_link_libraries(${PROJECT_NAME}_scan_node ${ament_LIBRARIES} curl)
 ament_target_dependencies(${PROJECT_NAME}_scan_node rclcpp rclpy sensor_msgs std_msgs CURL)
+# Suppress warnings from third-party rapidjson headers
+target_compile_options(${PROJECT_NAME}_scan_node PRIVATE -Wno-class-memaccess)
 
 install(TARGETS ${PROJECT_NAME}_scan_node
   DESTINATION lib/${PROJECT_NAME}
