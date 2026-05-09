@@ -118,7 +118,10 @@ protected:
     };
 	void scan_publish()
 	{
-		double inf = std::numeric_limits<double>::infinity();
+		// REP-117: NaN signals "no return" for invalid measurements. We prefer it
+		// over +inf because Foxglove's LaserScan panel warns on inf but treats
+		// NaN silently.
+		double no_return = std::numeric_limits<double>::quiet_NaN();
 		RCLCPP_INFO(get_logger(),"scan_publish");
 		// rclcpp::sleep_for(std::chrono::milliseconds(2000));
 		// get_telemetry_data(sensorip);
@@ -197,7 +200,7 @@ protected:
 				scan.scan_time = duration;
 				scan.time_increment = duration/(float)num_readings/2;
 				scan.range_min = 0.0;
-				scan.range_max = 100.0;
+				scan.range_max = 25.0;
 				scan.ranges.resize(num_readings);
 				scan.intensities.resize(num_readings);
 
@@ -209,7 +212,7 @@ protected:
 						scan.intensities[i] = scan_vec[i].rssi;
 						if(scan.ranges[i] == 0)
 						{
-							scan.ranges[i] = inf;
+							scan.ranges[i] = no_return;
 							scan.intensities[i] = 0;
 						}
 					}
@@ -219,7 +222,7 @@ protected:
 						scan.intensities[num_readings - i - 1] = scan_vec[i].rssi;
 						if(scan.ranges[num_readings - i - 1] == 0)
 						{
-							scan.ranges[num_readings - i - 1] = inf;
+							scan.ranges[num_readings - i - 1] = no_return;
 							scan.intensities[num_readings - i - 1] = 0;
 						}
 					}
