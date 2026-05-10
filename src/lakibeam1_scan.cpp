@@ -7,7 +7,9 @@
 #include <sched.h>
 
 #include <sys/select.h>
+#include <sys/time.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -109,6 +111,11 @@ protected:
         ser_addr.sin_addr.s_addr = inet_addr(hostip.c_str());
         ser_addr.sin_port = htons(atoi(port.c_str()));
 
+        struct timeval rcv_timeout;
+        rcv_timeout.tv_sec = 0;
+        rcv_timeout.tv_usec = 100000;
+        setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout));
+
         if(bind(sockfd, (struct sockaddr*)&ser_addr, sizeof(ser_addr)) < 0)
         {
             RCLCPP_INFO(get_logger(),"Socket bind error!");
@@ -129,12 +136,20 @@ protected:
 		{
 			if(scan_vec_ready == 0)
 			{
-				while(1)
+				while(rclcpp::ok())
 				{
 					if(j == 12)
 					{
 						unsigned int len = sizeof(clent_addr);
-						recvfrom(sockfd, &MSOP_Data, sizeof(MSOP_Data), 0, (struct sockaddr*)&clent_addr, &len);
+						ssize_t n = recvfrom(sockfd, &MSOP_Data, sizeof(MSOP_Data), 0, (struct sockaddr*)&clent_addr, &len);
+						if(n < 0)
+						{
+							if(errno == EAGAIN || errno == EWOULDBLOCK)
+							{
+								continue;
+							}
+							break;
+						}
 						if(MSOP_Data.BlockID[0].Azimuth == 0)
 						{
 							scan_end = scan_begin;
