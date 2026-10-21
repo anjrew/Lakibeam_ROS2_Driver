@@ -21,6 +21,7 @@
 #include <math.h>
 #include "../include/data_type.h"
 #include "../include/remote.h"
+#include "../include/scan_timing.hpp"
 
 #define DEG2RAD(x) ((x)*M_PI / 180.f)
 using namespace std;
@@ -52,6 +53,7 @@ protected:
 		get_parameter<string>("scan_range_stop",scan_range_stop);
 		get_parameter<bool>("inverted",inverted);
 		get_parameter<int>("angle_offset",angle_offset);
+		get_parameter<double>("time_offset",time_offset);
 	};
 
 	void declare_parameters()
@@ -68,6 +70,7 @@ protected:
 		declare_parameter<string>("scan_range_stop",scan_range_stop);
 		declare_parameter<bool>("inverted",inverted);
 		declare_parameter<int>("angle_offset",angle_offset);
+		declare_parameter<double>("time_offset",time_offset);
 	};
 	void info()
 	{
@@ -82,6 +85,7 @@ protected:
 		RCLCPP_INFO(get_logger(),"laser_enable:%s", laser_enable.c_str());
 		RCLCPP_INFO(get_logger(),"scan_range_start:%s", scan_range_start.c_str());
 		RCLCPP_INFO(get_logger(),"scan_range_stop:%s", scan_range_stop.c_str());
+		RCLCPP_INFO(get_logger(),"time_offset:%.4f s", time_offset);
 
 	};
 	void scan_config()
@@ -202,18 +206,26 @@ protected:
 
 			if(scan_vec_ready == 1)
 			{
+				uint16_t num_readings = scan_vec.size();
+				// scan_end is when this revolution's first packet arrived; scan_begin
+				// is when the next revolution's first packet arrived.
+				const lakibeam1::ScanTiming timing =
+					lakibeam1::compute_scan_timing(scan_end, scan_begin, num_readings, time_offset);
+				if(!timing.valid)
+				{
+					// First, partial revolution after startup: its start is unknown.
+					scan_vec.clear();
+					scan_vec_ready = 0;
+					continue;
+				}
 				sensor_msgs::msg::LaserScan scan;
-				uint16_t num_readings;
-				float duration = (scan_begin - scan_end).seconds();
-
-				num_readings = scan_vec.size();
-				scan.header.stamp = scan_begin;
+				scan.header.stamp = timing.stamp;
 				scan.header.frame_id = frame_id;
 				scan.angle_min = DEG2RAD(-180 + angle_offset);
 				scan.angle_max = DEG2RAD(180 + angle_offset);
 				scan.angle_increment = 2.0 * M_PI / num_readings;
-				scan.scan_time = duration;
-				scan.time_increment = duration/(float)num_readings/2;
+				scan.scan_time = timing.scan_time;
+				scan.time_increment = timing.time_increment;
 				scan.range_min = 0.0;
 				scan.range_max = 25.0;
 				scan.ranges.resize(num_readings);
@@ -254,6 +266,7 @@ protected:
 private:
     string hostip, sensorip, port, frame_id, output_topic,scanfreq,filter,laser_enable,scan_range_start,scan_range_stop;
     int resolution=25, scan_vec_ready=0, angle_offset;
+    double time_offset=0.0;
     bool inverted;
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub;
     rclcpp::Time scan_begin, scan_end;

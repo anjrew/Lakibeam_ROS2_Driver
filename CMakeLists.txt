@@ -23,6 +23,10 @@ if(BUILD_TESTING)
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_scan_timing test/test_scan_timing.cpp)
+  ament_target_dependencies(test_scan_timing rclcpp)
 endif()
 
 ament_package()

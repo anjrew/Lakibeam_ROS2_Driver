@@ -27,6 +27,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import LogInfo
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch.substitutions import TextSubstitution
 
 def generate_launch_description():
@@ -44,6 +45,7 @@ def generate_launch_description():
     scan_range_start = LaunchConfiguration('scan_range_start')
     scan_range_stop = LaunchConfiguration('scan_range_stop')
     sensorip = LaunchConfiguration('sensorip')
+    time_offset = LaunchConfiguration('time_offset')
 
 
     # frame_id = LaunchConfiguration('frame_id', default='laser')
@@ -112,6 +114,12 @@ def generate_launch_description():
     'sensorip',
     default_value='192.168.198.2',
     )
+    # Seconds added to each scan's stamp (first-beam time, REP-117) to cancel
+    # the sensor's output latency. Negative = earlier.
+    declare_time_offset_cmd = DeclareLaunchArgument(
+    'time_offset',
+    default_value='0.0',
+    )
 
     richbeam_lidar_node0 = Node(
         package='lakibeam1',
@@ -129,7 +137,8 @@ def generate_launch_description():
             'filter':filter,
             'laser_enable':laser_enable,
             'scan_range_start':scan_range_start,
-            'scan_range_stop':scan_range_stop
+            'scan_range_stop':scan_range_stop,
+            'time_offset':ParameterValue(time_offset, value_type=float),
         }],
         output='screen'
     )
@@ -150,6 +159,7 @@ def generate_launch_description():
     ld.add_action(declare_scan_range_start_cmd)
     ld.add_action(declare_scan_range_stop_cmd)
     ld.add_action(declare_sensorip_cmd)
+    ld.add_action(declare_time_offset_cmd)
     ld.add_action(richbeam_lidar_node0)
     # ld.add_action(richbeam_lidar_node1)
     # ld.add_action(rviz_node)
